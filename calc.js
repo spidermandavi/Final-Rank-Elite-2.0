@@ -27,7 +27,7 @@ const Calc = {
     // Helper to process a single tournament type
     function processTournament(tournament, results, type) {
       // Determine prize table
-      let prizeTable = CONFIG.tournamentTypes[type].default.prizes;
+      let prizeTable = CONFIG.tournamentTypes[type].prizes || CONFIG.tournamentTypes[type].default.prizes;
       if (type === "chessMood" && tournament.name.toLowerCase().includes("december")) {
         prizeTable = CONFIG.tournamentTypes[type].december.prizes;
       }
@@ -60,9 +60,11 @@ const Calc = {
       });
 
       // Split playerPool into tiers
-      const tiers = CONFIG.tiers.map(t => {
-        const startRank = t.maxRank === 20 ? 0 : tiers.length === 1 ? 20 : 50;
+      const tiers = CONFIG.tiers.map((t, idx) => {
+        const prevMaxRank = idx === 0 ? 0 : CONFIG.tiers[idx - 1].maxRank;
+        const startRank = Math.min(prevMaxRank, teamResults.length);
         const endRank = Math.min(t.maxRank, teamResults.length);
+
         return {
           players: teamResults.slice(startRank, endRank),
           percent: t.percent
@@ -77,7 +79,8 @@ const Calc = {
         let tierPool = playerPool * tier.percent;
 
         // Handle leftover if fewer players than max tier
-        const maxPlayersInTier = tierIdx === 0 ? 20 : tierIdx === 1 ? 30 : 50;
+        const prevMaxRank = tierIdx === 0 ? 0 : CONFIG.tiers[tierIdx - 1].maxRank;
+        const maxPlayersInTier = CONFIG.tiers[tierIdx].maxRank - prevMaxRank;
         if (tierPlayers.length < maxPlayersInTier) {
           const leftover = (maxPlayersInTier - tierPlayers.length) * (tierPool / maxPlayersInTier);
           tierPool -= leftover;
